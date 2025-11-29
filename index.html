@@ -1,0 +1,536 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Potentia - Gamified Recruitment</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Space Grotesk', sans-serif; background-color: #0f172a; color: white; }
+        
+        /* Animations */
+        .pulse-slow { animation: pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite; }
+        @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: .5; } }
+        
+        .slide-in { animation: slideIn 0.5s ease-out; }
+        @keyframes slideIn { from { transform: translateY(20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+
+        .glitch-text:hover {
+            animation: glitch 0.3s cubic-bezier(.25, .46, .45, .94) both infinite;
+            color: #ef4444;
+        }
+        @keyframes glitch {
+            0% { transform: translate(0) }
+            20% { transform: translate(-2px, 2px) }
+            40% { transform: translate(-2px, -2px) }
+            60% { transform: translate(2px, 2px) }
+            80% { transform: translate(2px, -2px) }
+            100% { transform: translate(0) }
+        }
+
+        /* Blob Animation (Fixed) */
+        @keyframes blob {
+            0% { transform: translate(0px, 0px) scale(1); }
+            33% { transform: translate(30px, -50px) scale(1.1); }
+            66% { transform: translate(-20px, 20px) scale(0.9); }
+            100% { transform: translate(0px, 0px) scale(1); }
+        }
+        .animate-blob {
+            animation: blob 7s infinite;
+        }
+        .animation-delay-2000 { animation-delay: 2s; }
+        .animation-delay-4000 { animation-delay: 4s; }
+
+        /* Custom Game Elements */
+        .chat-bubble { max-width: 80%; border-radius: 1rem; padding: 0.75rem 1rem; margin-bottom: 0.5rem; position: relative; }
+        .chat-their { background-color: #334155; align-self: flex-start; border-bottom-left-radius: 0; }
+        .chat-mine { background-color: #2563eb; align-self: flex-end; border-bottom-right-radius: 0; }
+
+        .progress-container { background: #1e293b; border-radius: 999px; height: 1.5rem; overflow: hidden; border: 2px solid #334155; }
+        .progress-bar { background: linear-gradient(90deg, #ec4899, #8b5cf6); height: 100%; width: 0%; transition: width 0.1s linear; }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col items-center justify-center p-4 relative overflow-hidden">
+
+    <!-- Background Elements (Fixed Z-Index & Interaction) -->
+    <div class="absolute top-0 left-0 w-full h-full overflow-hidden z-0 pointer-events-none">
+        <div class="absolute top-10 left-10 w-64 h-64 bg-purple-600 rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-blob"></div>
+        <div class="absolute top-10 right-10 w-64 h-64 bg-cyan-600 rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-blob animation-delay-2000"></div>
+        <div class="absolute -bottom-32 left-1/2 w-64 h-64 bg-pink-600 rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-blob animation-delay-4000"></div>
+    </div>
+
+    <!-- MAIN CONTAINER (Fixed Z-Index to be above background) -->
+    <main id="appContainer" class="w-full max-w-2xl bg-slate-900/80 backdrop-blur-xl border border-slate-700 rounded-2xl shadow-2xl overflow-hidden min-h-[600px] flex flex-col relative z-10">
+        
+        <!-- HEADER -->
+        <header class="p-6 border-b border-slate-700 flex justify-between items-center select-none">
+            <div class="flex items-center gap-2">
+                <div class="w-3 h-3 rounded-full bg-red-500"></div>
+                <div class="w-3 h-3 rounded-full bg-yellow-500"></div>
+                <div class="w-3 h-3 rounded-full bg-green-500"></div>
+                <span class="ml-3 font-bold text-xl tracking-wider text-slate-200 cursor-pointer" onclick="location.reload()">POTENTIA<span class="text-cyan-400">.AI</span></span>
+            </div>
+            <div class="text-xs text-slate-400 font-mono" id="gameTimer">READY</div>
+        </header>
+
+        <!-- SCREENS -->
+        
+        <!-- 1. WELCOME SCREEN -->
+        <section id="screen-welcome" class="flex-1 flex flex-col items-center justify-center p-8 text-center slide-in">
+            <h1 class="text-4xl md:text-5xl font-bold mb-4 bg-clip-text text-transparent bg-gradient-to-r from-cyan-400 to-purple-500">
+                Quên CV đi.
+            </h1>
+            <p class="text-slate-400 text-lg mb-8 max-w-md mx-auto">
+                Chúng tôi không quan tâm bạn đã làm ở đâu.<br>
+                Chúng tôi quan tâm <span class="text-white font-bold">tiềm năng</span> của bạn.<br>
+                Hoàn thành 3 thử thách để mở khóa offer.
+            </p>
+            
+            <!-- Cards are now clickable buttons -->
+            <div class="grid grid-cols-3 gap-4 mb-10 w-full max-w-md select-none">
+                <div onclick="startGame()" class="bg-slate-800 p-4 rounded-xl border border-slate-700 flex flex-col items-center hover:bg-slate-700 transition cursor-pointer active:scale-95 group">
+                    <span class="text-2xl mb-2 group-hover:scale-110 transition-transform">🧠</span>
+                    <span class="text-xs font-bold text-slate-300 group-hover:text-cyan-400">IQ Logic</span>
+                    <span class="text-[10px] text-slate-500 mt-1">Bắt đầu</span>
+                </div>
+                <div onclick="startGame()" class="bg-slate-800 p-4 rounded-xl border border-slate-700 flex flex-col items-center hover:bg-slate-700 transition cursor-pointer active:scale-95 group">
+                    <span class="text-2xl mb-2 group-hover:scale-110 transition-transform">❤️</span>
+                    <span class="text-xs font-bold text-slate-300 group-hover:text-pink-400">EQ Cảm xúc</span>
+                    <span class="text-[10px] text-slate-500 mt-1">Bắt đầu</span>
+                </div>
+                <div onclick="startGame()" class="bg-slate-800 p-4 rounded-xl border border-slate-700 flex flex-col items-center hover:bg-slate-700 transition cursor-pointer active:scale-95 group">
+                    <span class="text-2xl mb-2 group-hover:scale-110 transition-transform">🔥</span>
+                    <span class="text-xs font-bold text-slate-300 group-hover:text-orange-400">Độ bền bỉ</span>
+                    <span class="text-[10px] text-slate-500 mt-1">Bắt đầu</span>
+                </div>
+            </div>
+
+            <button onclick="startGame()" class="group relative px-8 py-4 bg-cyan-600 rounded-full font-bold text-white shadow-[0_0_20px_rgba(8,145,178,0.5)] hover:shadow-[0_0_30px_rgba(8,145,178,0.8)] transition-all overflow-hidden cursor-pointer active:scale-95">
+                <span class="relative z-10 group-hover:tracking-widest transition-all">START ASSESSMENT</span>
+                <div class="absolute top-0 left-0 w-full h-full bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:animate-shimmer pointer-events-none"></div>
+            </button>
+        </section>
+
+        <!-- 2. GAME 1: IQ (Pattern Recognition) -->
+        <section id="screen-iq" class="hidden flex-1 flex flex-col p-8 slide-in">
+            <div class="flex justify-between items-end mb-6">
+                <div>
+                    <h2 class="text-2xl font-bold text-purple-400">Level 1: Logic Core</h2>
+                    <p class="text-sm text-slate-400">Tìm quy luật tiếp theo.</p>
+                </div>
+                <div class="text-4xl font-bold text-slate-700 select-none" id="iq-timer">15</div>
+            </div>
+
+            <div class="flex-1 flex flex-col items-center justify-center">
+                <!-- Puzzle Canvas -->
+                <div class="bg-slate-800 p-8 rounded-2xl border border-slate-600 mb-8 w-full max-w-md flex justify-center gap-4 text-3xl font-mono select-none" id="puzzle-container">
+                    <!-- Dynamic Content -->
+                </div>
+
+                <div class="grid grid-cols-2 gap-4 w-full max-w-md" id="iq-options">
+                    <!-- Options generated by JS -->
+                </div>
+            </div>
+        </section>
+
+        <!-- 3. GAME 2: EQ (Scenario Chat) -->
+        <section id="screen-eq" class="hidden flex-1 flex flex-col p-0 slide-in bg-slate-900">
+            <div class="p-6 bg-slate-800 border-b border-slate-700 flex items-center gap-4">
+                <div class="w-10 h-10 rounded-full bg-gradient-to-tr from-orange-400 to-red-500 flex items-center justify-center text-lg font-bold">😡</div>
+                <div>
+                    <h2 class="font-bold text-white">Khách hàng khó tính</h2>
+                    <p class="text-xs text-red-400 animate-pulse">Đang nhập...</p>
+                </div>
+            </div>
+
+            <div class="flex-1 p-6 overflow-y-auto flex flex-col gap-2" id="chat-history">
+                <!-- Chat messages go here -->
+            </div>
+
+            <div class="p-4 bg-slate-800 border-t border-slate-700">
+                <p class="text-xs text-slate-400 mb-3 uppercase font-bold tracking-wider">Chọn phản hồi khôn ngoan nhất:</p>
+                <div class="flex flex-col gap-2" id="eq-options">
+                    <!-- Options -->
+                </div>
+            </div>
+        </section>
+
+        <!-- 4. GAME 3: GRIT (Resilience/Clicker) -->
+        <section id="screen-grit" class="hidden flex-1 flex flex-col p-8 items-center justify-center slide-in relative select-none">
+            
+            <div class="absolute top-0 left-0 w-full h-1 bg-slate-800">
+                <div id="grit-timer-bar" class="h-full bg-red-500 w-full transition-all duration-[10000ms] ease-linear"></div>
+            </div>
+
+            <div class="text-center mb-8">
+                <h2 class="text-2xl font-bold text-pink-500 mb-2">Level 3: The Crunch Mode</h2>
+                <p class="text-slate-400 max-w-sm">Server đang sập! Dữ liệu đang rò rỉ. Hãy giữ thanh năng lượng trên 80% trong 10 giây để cứu hệ thống!</p>
+            </div>
+
+            <div class="w-full max-w-xs h-64 bg-slate-800 rounded-2xl border-4 border-slate-600 relative overflow-hidden mb-6 shadow-[inset_0_0_20px_rgba(0,0,0,0.5)] cursor-pointer" onclick="handleGritClick()">
+                <!-- Liquid Fill -->
+                <div id="grit-liquid" class="absolute bottom-0 left-0 w-full bg-cyan-500 transition-all duration-75 ease-out opacity-80 pointer-events-none" style="height: 30%"></div>
+                
+                <!-- Target Line -->
+                <div class="absolute top-[20%] left-0 w-full border-t-2 border-dashed border-green-400 z-10 opacity-50 pointer-events-none"></div>
+                <div class="absolute top-[22%] right-2 text-xs text-green-400 font-bold pointer-events-none">MỤC TIÊU</div>
+                
+                <!-- Warning Overlay -->
+                <div id="grit-warning" class="absolute inset-0 bg-red-500/20 hidden animate-pulse pointer-events-none"></div>
+            </div>
+
+            <button id="btn-mash" class="w-24 h-24 rounded-full bg-slate-700 border-b-4 border-slate-900 active:border-b-0 active:translate-y-1 transition-all flex items-center justify-center text-3xl shadow-xl hover:bg-slate-600 active:bg-cyan-600 text-white select-none touch-manipulation cursor-pointer">
+                ⚡
+            </button>
+            <p class="mt-4 text-xs text-slate-500 animate-pulse">Nhấp liên tục (Tap fast)!</p>
+
+        </section>
+
+        <!-- 5. RESULTS DASHBOARD -->
+        <section id="screen-result" class="hidden flex-1 flex flex-col p-8 slide-in">
+            <h2 class="text-3xl font-bold text-center mb-2">Hồ sơ Tiềm năng</h2>
+            <p class="text-center text-slate-400 text-sm mb-8">Dựa trên dữ liệu thực tế (Real-time data)</p>
+
+            <div class="flex-1 flex flex-col items-center justify-center relative">
+                <!-- Radar Chart Visual (Simplified with CSS) -->
+                <div class="relative w-64 h-64 mb-8">
+                    <!-- Hexagon Grid -->
+                    <svg viewBox="0 0 100 100" class="w-full h-full drop-shadow-[0_0_15px_rgba(34,211,238,0.3)]">
+                        <polygon points="50,5 95,27.5 95,72.5 50,95 5,72.5 5,27.5" fill="none" stroke="#334155" stroke-width="1" />
+                        <polygon points="50,25 75,37.5 75,62.5 50,75 25,62.5 25,37.5" fill="none" stroke="#334155" stroke-width="1" />
+                        <!-- User Stats Polygon -->
+                        <polygon id="stats-poly" points="50,50 50,50 50,50 50,50 50,50 50,50" fill="rgba(34, 211, 238, 0.4)" stroke="#22d3ee" stroke-width="2" />
+                    </svg>
+                    
+                    <!-- Labels -->
+                    <div class="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-4 text-xs font-bold text-purple-400">IQ</div>
+                    <div class="absolute bottom-0 right-0 translate-y-4 text-xs font-bold text-orange-400">EQ</div>
+                    <div class="absolute bottom-0 left-0 translate-y-4 text-xs font-bold text-pink-400">GRIT</div>
+                </div>
+
+                <!-- Stats Breakdown -->
+                <div class="w-full max-w-sm space-y-4">
+                    <div>
+                        <div class="flex justify-between text-xs font-bold mb-1">
+                            <span>LOGIC (IQ)</span>
+                            <span id="score-iq" class="text-purple-400">0%</span>
+                        </div>
+                        <div class="h-2 bg-slate-700 rounded-full overflow-hidden">
+                            <div id="bar-iq" class="h-full bg-purple-500 w-0 transition-all duration-1000"></div>
+                        </div>
+                    </div>
+                    <div>
+                        <div class="flex justify-between text-xs font-bold mb-1">
+                            <span>CẢM XÚC (EQ)</span>
+                            <span id="score-eq" class="text-orange-400">0%</span>
+                        </div>
+                        <div class="h-2 bg-slate-700 rounded-full overflow-hidden">
+                            <div id="bar-eq" class="h-full bg-orange-500 w-0 transition-all duration-1000"></div>
+                        </div>
+                    </div>
+                    <div>
+                        <div class="flex justify-between text-xs font-bold mb-1">
+                            <span>BỀN BỈ (GRIT)</span>
+                            <span id="score-grit" class="text-pink-400">0%</span>
+                        </div>
+                        <div class="h-2 bg-slate-700 rounded-full overflow-hidden">
+                            <div id="bar-grit" class="h-full bg-pink-500 w-0 transition-all duration-1000"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="mt-8 text-center" id="final-verdict">
+                <!-- JS Populated -->
+            </div>
+            
+            <button onclick="resetGame()" class="mt-4 text-slate-500 hover:text-white text-sm underline cursor-pointer px-4 py-2">Thử lại (Re-roll)</button>
+        </section>
+
+    </main>
+
+    <script>
+        // --- GAME STATE ---
+        const state = {
+            scores: { iq: 0, eq: 0, grit: 0 },
+            currentStage: 0,
+            gritLiquidHeight: 30,
+            gritGameActive: false
+        };
+
+        const screens = {
+            welcome: document.getElementById('screen-welcome'),
+            iq: document.getElementById('screen-iq'),
+            eq: document.getElementById('screen-eq'),
+            grit: document.getElementById('screen-grit'),
+            result: document.getElementById('screen-result')
+        };
+
+        // --- CORE FUNCTIONS ---
+        function switchScreen(screenName) {
+            Object.values(screens).forEach(el => el.classList.add('hidden'));
+            screens[screenName].classList.remove('hidden');
+        }
+
+        function startGame() {
+            switchScreen('iq');
+            startIQGame();
+        }
+
+        function resetGame() {
+            // Reset state
+            state.scores = { iq: 0, eq: 0, grit: 0 };
+            state.gritLiquidHeight = 30;
+            state.gritGameActive = false;
+            
+            // Clear history
+            document.getElementById('chat-history').innerHTML = '';
+            document.getElementById('eq-options').innerHTML = '';
+            
+            // Reset visuals
+            document.getElementById('bar-iq').style.width = '0%';
+            document.getElementById('bar-eq').style.width = '0%';
+            document.getElementById('bar-grit').style.width = '0%';
+            
+            // Go to start
+            switchScreen('welcome');
+        }
+
+        // --- GAME 1: IQ LOGIC (Pattern) ---
+        function startIQGame() {
+            const container = document.getElementById('puzzle-container');
+            const optionsDiv = document.getElementById('iq-options');
+            const timerEl = document.getElementById('iq-timer');
+            
+            container.innerHTML = `
+                <div class="p-2 border border-slate-600 rounded">2</div>
+                <div class="text-slate-500">→</div>
+                <div class="p-2 border border-slate-600 rounded">5</div>
+                <div class="text-slate-500">→</div>
+                <div class="p-2 border border-slate-600 rounded">10</div>
+                <div class="text-slate-500">→</div>
+                <div class="p-2 border border-slate-600 rounded">17</div>
+                <div class="text-slate-500">→</div>
+                <div class="p-2 border border-dashed border-purple-500 text-purple-400 rounded">?</div>
+            `;
+
+            const options = [
+                { val: 24, correct: false },
+                { val: 26, correct: true },
+                { val: 25, correct: false },
+                { val: 32, correct: false }
+            ];
+
+            optionsDiv.innerHTML = options.map(opt => `
+                <button onclick="handleIQAnswer(${opt.correct})" class="bg-slate-700 hover:bg-slate-600 p-4 rounded-lg text-xl font-bold transition active:scale-95 cursor-pointer select-none">
+                    ${opt.val}
+                </button>
+            `).join('');
+
+            // Timer Logic
+            let timeLeft = 15;
+            timerEl.innerText = timeLeft;
+            
+            if(window.iqTimer) clearInterval(window.iqTimer);
+            
+            window.iqTimer = setInterval(() => {
+                timeLeft--;
+                timerEl.innerText = timeLeft;
+                if (timeLeft <= 0) {
+                    clearInterval(window.iqTimer);
+                    handleIQAnswer(false); // Time out
+                }
+            }, 1000);
+        }
+
+        function handleIQAnswer(isCorrect) {
+            clearInterval(window.iqTimer);
+            state.scores.iq = isCorrect ? 100 : 40;
+            
+            setTimeout(() => {
+                switchScreen('eq');
+                startEQGame();
+            }, 500);
+        }
+
+        // --- GAME 2: EQ SIMULATOR ---
+        function startEQGame() {
+            const chatHistory = document.getElementById('chat-history');
+            const optionsDiv = document.getElementById('eq-options');
+
+            // Initial Message
+            setTimeout(() => {
+                addMessage("Tôi rất thất vọng! Đã 2 ngày rồi mà tính năng tôi yêu cầu vẫn chưa xong. Các người làm ăn kiểu gì thế hả?? 😡", 'their');
+            }, 800);
+
+            const scenarios = [
+                {
+                    text: "Sếp bạn nói: 'Chúng ta không thể xong kịp, đừng hứa bừa.'",
+                    options: [
+                        { text: "Xin lỗi anh, team em đang cố hết sức rồi ạ.", score: 50, type: "passive" },
+                        { text: "Anh bình tĩnh, dự án phức tạp thì phải lâu chứ.", score: 10, type: "aggressive" },
+                        { text: "Em hiểu anh đang sốt ruột. Em đã check với team, tụi em sẽ gửi bản demo trước 5h chiều nay.", score: 100, type: "empathy" }
+                    ]
+                }
+            ];
+
+            // Render Options after delay
+            setTimeout(() => {
+                optionsDiv.innerHTML = scenarios[0].options.map(opt => `
+                    <button onclick="handleEQChoice('${opt.text}', ${opt.score})" class="text-left text-sm p-3 bg-slate-700 hover:bg-slate-600 rounded-lg transition border border-transparent hover:border-slate-500 cursor-pointer w-full">
+                        ${opt.text}
+                    </button>
+                `).join('');
+            }, 2000);
+        }
+
+        function addMessage(text, type) {
+            const div = document.createElement('div');
+            div.className = `chat-bubble ${type === 'their' ? 'chat-their' : 'chat-mine'} slide-in`;
+            div.innerText = text;
+            document.getElementById('chat-history').appendChild(div);
+            document.getElementById('chat-history').scrollTop = document.getElementById('chat-history').scrollHeight;
+        }
+
+        function handleEQChoice(text, score) {
+            addMessage(text, 'mine');
+            state.scores.eq = score;
+            document.getElementById('eq-options').innerHTML = ''; // Clear options
+
+            setTimeout(() => {
+                addMessage(score > 80 ? "Ok, tôi đợi tin cậu. Đừng làm tôi thất vọng lần nữa." : "Tôi không quan tâm, tôi sẽ gọi cho giám đốc.", 'their');
+                
+                setTimeout(() => {
+                    switchScreen('grit');
+                    startGritGame();
+                }, 2000);
+            }, 1000);
+        }
+
+        // --- GAME 3: GRIT (Clicker) ---
+        function startGritGame() {
+            state.gritLiquidHeight = 30; // Reset
+            state.gritGameActive = true;
+            
+            const liquidEl = document.getElementById('grit-liquid');
+            const btn = document.getElementById('btn-mash');
+            let duration = 10000; // 10s game
+            
+            // Clear any existing intervals
+            if(window.gritDecay) clearInterval(window.gritDecay);
+
+            // Decay logic (Gravity)
+            window.gritDecay = setInterval(() => {
+                if (!state.gritGameActive) { clearInterval(window.gritDecay); return; }
+                
+                state.gritLiquidHeight -= 1.5; // Drains fast
+                if (state.gritLiquidHeight < 0) state.gritLiquidHeight = 0;
+                if (state.gritLiquidHeight > 100) state.gritLiquidHeight = 100;
+                
+                liquidEl.style.height = `${state.gritLiquidHeight}%`;
+                
+                // Visual warning
+                const warnEl = document.getElementById('grit-warning');
+                if (state.gritLiquidHeight < 20) warnEl.classList.remove('hidden');
+                else warnEl.classList.add('hidden');
+
+            }, 50);
+
+            // Timer bar animation
+            const bar = document.getElementById('grit-timer-bar');
+            bar.style.transition = 'none';
+            bar.style.width = '100%';
+            setTimeout(() => {
+               bar.style.transition = `width ${duration}ms linear`;
+               bar.style.width = '0%';
+            }, 50);
+
+            // Click Handler
+            btn.onclick = handleGritClick;
+
+            // Game Over Check
+            setTimeout(() => {
+                state.gritGameActive = false;
+                
+                if (state.gritLiquidHeight >= 80) state.scores.grit = 100;
+                else if (state.gritLiquidHeight >= 50) state.scores.grit = 70;
+                else state.scores.grit = 30;
+
+                switchScreen('result');
+                showResults();
+            }, duration);
+        }
+
+        function handleGritClick() {
+            if (!state.gritGameActive) return;
+            state.gritLiquidHeight += 8; // Boost up
+            
+            // Add click effect
+            const burst = document.createElement('div');
+            burst.className = 'absolute text-2xl animate-ping pointer-events-none text-yellow-400 font-bold';
+            burst.style.left = Math.random() * 80 + '%';
+            burst.style.top = '50%';
+            burst.innerText = '+⚡';
+            document.getElementById('screen-grit').appendChild(burst);
+            setTimeout(() => burst.remove(), 500);
+        }
+
+        // --- RESULTS ---
+        function showResults() {
+            const { iq, eq, grit } = state.scores;
+            
+            // Animate Bars
+            setTimeout(() => {
+                document.getElementById('bar-iq').style.width = `${iq}%`;
+                document.getElementById('score-iq').innerText = `${iq}/100`;
+            }, 200);
+            setTimeout(() => {
+                document.getElementById('bar-eq').style.width = `${eq}%`;
+                document.getElementById('score-eq').innerText = `${eq}/100`;
+            }, 400);
+            setTimeout(() => {
+                document.getElementById('bar-grit').style.width = `${grit}%`;
+                document.getElementById('score-grit').innerText = `${grit}/100`;
+            }, 600);
+
+            // Update Radar Polygon
+            const r = 45;
+            const y1 = 50 - (r * (iq/100));
+            const x2 = 50 + (r * 0.866 * (eq/100));
+            const y2 = 50 + (r * 0.5 * (eq/100));
+            const x3 = 50 - (r * 0.866 * (grit/100));
+            const y3 = 50 + (r * 0.5 * (grit/100));
+
+            document.getElementById('stats-poly').setAttribute('points', `50,${y1} ${x2},${y2} ${x3},${y3}`);
+
+            // Verdict
+            const avg = (iq + eq + grit) / 3;
+            const verdictEl = document.getElementById('final-verdict');
+            
+            let html = '';
+            if (avg >= 80) {
+                html = `
+                    <div class="text-4xl mb-2">🚀</div>
+                    <h3 class="text-2xl font-bold text-cyan-400">HIRED! (Tuyển thẳng)</h3>
+                    <p class="text-slate-400 text-sm mt-2">Bạn là một chiến binh toàn diện. Welcome to the team!</p>
+                `;
+            } else if (avg >= 50) {
+                html = `
+                    <div class="text-4xl mb-2">👀</div>
+                    <h3 class="text-2xl font-bold text-yellow-400">POTENTIAL (Cân nhắc)</h3>
+                    <p class="text-slate-400 text-sm mt-2">Bạn có tố chất tốt nhưng cần rèn luyện thêm.</p>
+                `;
+            } else {
+                html = `
+                    <div class="text-4xl mb-2">💀</div>
+                    <h3 class="text-2xl font-bold text-red-500">GAME OVER</h3>
+                    <p class="text-slate-400 text-sm mt-2">Cảm ơn bạn đã tham gia. Hẹn gặp lại lần sau.</p>
+                `;
+            }
+            verdictEl.innerHTML = html;
+        }
+
+    </script>
+</body>
+</html>
